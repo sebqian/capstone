@@ -1,0 +1,28 @@
+name: ml_env
+channels:
+  - conda-forge
+dependencies:
+  - flake8
+  - h5py
+  - matplotlib
+  - nibabel
+  - nilearn
+  - pandas
+  - pillow
+  - plotly
+  - scikit-learn
+  - scipy
+  - seaborn
+  - torchio
+#  - tensorboard
+#  - tensorboard-data-server
+#  - tensorboard-plugin-wit
+#  - tensorflow
+#  - tensorflow-addons
+#  - tensorflow-datasets
+#  - tensorflow-estimator
+#  - tensorflow-hub
+#  - tensorflow-io-gcs-filesystem
+#  - tensorflow-model-optimization
+#  - tensorflow-text
+  - torchio

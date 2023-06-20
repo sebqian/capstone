@@ -1,0 +1,32 @@
+#This file may be used to create an environment using:
+# $ conda create --name <env> --file <this file>
+# platform: linux-64
+flake8
+h5py
+jupyterlab
+lifelines
+matplotlib
+monai
+nibabel
+nilearn
+pandas
+parameterized
+pillow
+plotly
+pylance
+scikit-learn
+scipy
+seaborn
+tensorboard
+tensorboard-data-server
+tensorboard-plugin-wit
+tensorflow
+tensorflow-addons
+tensorflow-datasets
+tensorflow-estimator
+tensorflow-hub
+tensorflow-io-gcs-filesystem
+tensorflow-model-optimization
+tensorflow-text
+torchio
+torchsummary

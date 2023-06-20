@@ -1,0 +1,45 @@
+experiment:
+    name: hecktor_test
+    data_path: /workspace/ro_codebase/preprocessor/images/test_data/processed_128x128/subvolume_32
+    data_type: subvolume  # choices=['subvolume', 'patches']
+model:
+    name: segresnet  # choices=['unet', 'segresnet']
+    output_type: logits  # choices=['logits', 'sigmoid']
+    x: 128
+    y: 128
+    z: 32
+    input_channel: 2
+    output_channel: 1
+loss:
+    name: generalized_dice_focal_loss
+    include_background: true
+    sigmoid: true
+    softmax: false
+metric:
+    name: dice
+    include_background: false
+    num_classes: 2
+    reduction: none
+    get_not_nans: true
+    ignore_empty: true
+train:
+    max_queue_length: 50
+    samples_per_volume: 4
+    num_workers: 1
+    epochs: 10
+    start_epoch: 0
+    batch_size: 4
+    num_steps: 100
+    use_balanced_weights: false
+    lr: 0.01
+    lr_scheduler: "poly"     #choices=['poly', 'step', 'cos']
+    momentum: 0.9
+    weight_decay: 0.0005
+    nesterov: false
+    callbacks:
+    logging_frequency_steps: 2
+valid:
+    max_queue_length: 50
+    samples_per_volume: 4
+    num_workers: 1
+    batch_size: 4
