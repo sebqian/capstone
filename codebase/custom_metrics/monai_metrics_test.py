@@ -6,7 +6,7 @@ import numpy as np
 
 from codebase.custom_metrics import monai_metrics
 
-_METRICS_CONFIG = {'name': 'generalized_dice', 'include_background': False, 'reduction': 'none',
+_METRICS_CONFIG = {'name': 'generalized_dice', 'include_background': False, 'reduction': 'mean',
                    'get_not_nans': True, 'num_classes': 3}
 
 

@@ -1,4 +1,4 @@
-"""HECKTOR Trainer Module."""
+"""HECKTOR Trainer Module in pytorch style."""
 from typing import Any, Dict, Optional, Tuple, Sequence
 import numpy as np
 
@@ -12,7 +12,7 @@ import torchsummary
 
 import codebase.terminology as term
 from codebase.projects.hecktor2022 import dataloader
-from codebase.projects.hecktor2022.models import monai_models
+from codebase.models import monai_models
 from codebase.custom_losses import segmentation_loss, monai_losses
 from codebase.custom_metrics import segmentation_metrics, monai_metrics
 
@@ -93,7 +93,6 @@ class Trainer(object):
         monai_model = monai_models.get_model(
             model_name=model_name,
             output_type=self.config['model']['output_type'],
-            device=self.device,
             spatial_dims=3,
             in_channels=self.config['model']['input_channel'],
             out_channels=self.config['model']['output_channel'],
@@ -101,7 +100,7 @@ class Trainer(object):
             network_config=model_config
         )
         # self.model = torch.nn.Sequential(monai_model, torch.nn.Sigmoid())
-        self.model = monai_model
+        self.model = monai_model.to(device=self.device)
 
         if _PRINT_MODEL_SUMMARY:
             print(torchsummary.summary(self.model, input_size=input_size))

@@ -14,7 +14,7 @@ from monai.transforms import (
     EnsureTyped,
 )
 
-import terminology as term
+import codebase.terminology as term
 
 _TRANSFORM_DICT = {'flip': {'p': 0.5, 'axes': ('LR', 'AP')},
                    # ration range has to consider whether the channel exist or not

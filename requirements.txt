@@ -5,6 +5,7 @@ flake8
 h5py
 jupyterlab
 lifelines
+lightning
 matplotlib
 monai
 nibabel
@@ -14,6 +15,7 @@ parameterized
 pillow
 plotly
 pylance
+torch-tb-profiler
 scikit-learn
 scipy
 seaborn

@@ -8,6 +8,7 @@ def get_segmentation_loss(config: Dict[str, Any]):
     name = config['name']
     loss = dice.DiceLoss(
         include_background=config['include_background'],
+        to_onehot_y=config['to_onehot_y'],
         sigmoid=config['sigmoid'],
         softmax=config['softmax']
         )  # default
@@ -15,6 +16,9 @@ def get_segmentation_loss(config: Dict[str, Any]):
         print('Use dice focal loss')
         loss = dice.DiceFocalLoss(
             include_background=config['include_background'],
+            to_onehot_y=config['to_onehot_y'],
+            sigmoid=config['sigmoid'],
+            softmax=config['softmax']
         )
     if name == 'masked_dice':
         print('Use masked dice loss')
@@ -27,6 +31,7 @@ def get_segmentation_loss(config: Dict[str, Any]):
         print('Use generalized_dice_focal_loss')
         loss = dice.GeneralizedDiceFocalLoss(
             include_background=config['include_background'],
+            to_onehot_y=config['to_onehot_y'],
             sigmoid=config['sigmoid'],
             softmax=config['softmax']
         )
@@ -34,6 +39,7 @@ def get_segmentation_loss(config: Dict[str, Any]):
         print('Use tversky_loss')
         loss = tversky.TverskyLoss(
             include_background=config['include_background'],
+            to_onehot_y=config['to_onehot_y'],
             sigmoid=config['sigmoid'],
             softmax=config['softmax'],
             alpha=0.3,
@@ -43,5 +49,15 @@ def get_segmentation_loss(config: Dict[str, Any]):
         print('Use focal_loss')
         loss = focal_loss.FocalLoss(
             include_background=config['include_background'],
+            to_onehot_y=config['to_onehot_y'],
+            use_softmax=config['softmax']
+        )
+    if name == 'dice_ce':
+        print('Use Dice CrossEntryo loss')
+        loss = dice.DiceCELoss(
+            include_background=config['include_background'],
+            to_onehot_y=config['to_onehot_y'],
+            sigmoid=config['sigmoid'],
+            softmax=config['softmax'],
         )
     return loss
