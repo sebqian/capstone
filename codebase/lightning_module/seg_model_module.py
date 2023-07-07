@@ -56,12 +56,13 @@ class SegmentationModelModule(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = self.optimizer_class(self.parameters(), lr=self.lr)
-        scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=3)
-        return {
-            'optimizer': optimizer,
-            'lr_scheduler': scheduler,
-            'monitor': 'val_loss'  # Select the metric to monitor for scheduling
-        }
+        # scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=3)
+        # return {
+        #     'optimizer': optimizer,
+        #     'lr_scheduler': scheduler,
+        #     'monitor': 'val_loss'  # Select the metric to monitor for scheduling
+        # }
+        return optimizer
 
     def prepare_batch(self,
                       batch: Dict[str, torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor]:

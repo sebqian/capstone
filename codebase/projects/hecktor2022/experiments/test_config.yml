@@ -19,7 +19,7 @@ model:
         blocks_up: [1, 1, 1, 1]
 loss:
     name: generalized_dice_focal_loss
-    include_background: true
+    include_background: false
     sigmoid: false
     softmax: true
     to_onehot_y: false
@@ -29,7 +29,7 @@ metric:
     num_classes: 3
     reduction: mean
     get_not_nans: false
-    ignore_empty: false
+    ignore_empty: true
     activate: false
     sigmoid: false
     softmax: true
@@ -42,7 +42,7 @@ train:
     batch_size: 2
     num_steps: 100
     use_balanced_weights: false
-    lr: 0.01
+    lr: 0.002
     lr_scheduler: "poly"     #choices=['poly', 'step', 'cos']
     momentum: 0.9
     weight_decay: 0.0005

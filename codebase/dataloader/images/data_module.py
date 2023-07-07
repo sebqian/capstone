@@ -56,7 +56,7 @@ class MedicalImageDataModule(pl.LightningDataModule):
         self.include_test = test_config['include']
         self.base_dir = epath.Path(experiment_config['data_path'])
         self.train_ids = []
-        self.val_ids = []
+        self.valid_ids = []
         self.test_ids = []
         self.transform_dict = transform_dict
         self.train_transform = None
