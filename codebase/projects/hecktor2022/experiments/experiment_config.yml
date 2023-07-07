@@ -1,21 +1,28 @@
 experiment:
-    name: hecktor_exp062324_segresent
+    name: hecktor_exp070423_segresent
     data_path: /workspace/data/hecktor2022/processed_256x256/subvolume_32
     data_type: subvolume  # choices=['subvolume', 'patches']
 model:
     name: segresnet  # choices=['unet', 'segresnet']
     output_type: logits  # choices=['logits', 'sigmoid']
+    spatial_dim: 3
     x: 256
     y: 256
     z: 32
     input_channel: 2
     output_channel: 3
+    dropout: 0.3
+    architecture:
+        init_filters: 32
+        use_conv_final: true
+        blocks_down: [1, 2, 2, 4, 4]  # yaml only supports list
+        blocks_up: [1, 1, 1, 1]
 loss:
     name: generalized_dice_focal_loss
     include_background: true
     sigmoid: false
     softmax: true
-    to_onehot_y: true
+    to_onehot_y: false
 metric:
     name: dice
     include_background: false
@@ -30,7 +37,7 @@ train:
     max_queue_length: 50
     samples_per_volume: 4
     num_workers: 16
-    epochs: 32
+    epochs: 64
     start_epoch: 0
     batch_size: 2
     num_steps: 100
@@ -49,3 +56,4 @@ valid:
     batch_size: 2
 test:
     include: false
+    batch_size: 2

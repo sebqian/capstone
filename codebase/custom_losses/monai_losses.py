@@ -1,9 +1,9 @@
 """Losses from Manai package."""
-from typing import Any, Dict
+from typing import Any, Callable, Dict
 from monai.losses import dice, tversky, focal_loss
 
 
-def get_segmentation_loss(config: Dict[str, Any]):
+def get_segmentation_loss(config: Dict[str, Any]) -> Callable:
     """Return a segmentation loss."""
     name = config['name']
     loss = dice.DiceLoss(

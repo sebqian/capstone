@@ -6,7 +6,7 @@ class Phase(Enum):
     TRAIN = 'train'
     VALID = 'valid'
     TEST = 'test'
-    PRED = 'predict'
+    INFER = 'infer'
 
 
 class Modality(Enum):

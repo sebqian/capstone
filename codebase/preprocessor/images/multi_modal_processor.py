@@ -17,8 +17,8 @@ _MAX_HU = 1024
 _MIN_HU = -1024
 _N_LABLES = 3
 _BOX_RANGE = 310.0  # in mm
-_BODY_THRESHOLD = {term.Modality.CT: (-300, 300), term.Modality.PET: (0.5, 9999)}
-_IMG_XYSIZE_BEFORE_CROPPING = (512, 512)
+BODY_THRESHOLD = {term.Modality.CT: (-300, 300), term.Modality.PET: (0.5, 9999)}
+IMG_XYSIZE_BEFORE_CROPPING = (512, 512)
 _MIN_PIXELS_BRAIN_SLICE = 10000  # minimum # of pixels when we call it's start of brain
 
 
@@ -159,10 +159,10 @@ class MultiModalProcessor():
                 scalar_img = subject[modality.value]
                 print(f'\t {modality.value}: Shape - {scalar_img.shape}; Spacing - {scalar_img.spacing}.')
 
-    def resample_to_reference(self, subject: tio.Subject, xy_size: Tuple[int, int]) -> tio.Subject:
+    def resample_to_reference(self, subject: tio.Subject) -> tio.Subject:
         """Assume all the volumes are already co-registered."""
         ref_img = subject[self.reference.value]
-        image_size = (xy_size[0], xy_size[1], ref_img.shape[-1])
+        image_size = ref_img.spatial_shape
         resize_for_ref = tio.transforms.Resize(image_size)
         ref_img = resize_for_ref(ref_img)
         resample_transform = tio.transforms.Resample(target=ref_img)  # type: ignore
@@ -255,19 +255,10 @@ class MultiModalProcessor():
         transform_comp = tio.transforms.Compose(transform_collection)
         return transform_comp
 
-    def find_bounding_box_and_crop(self, subject: tio.Subject,
-                                   desired_xy_size: Tuple[int, int]) -> tio.Subject:
-        """Determine the bounding box and crop it from the images.
-        All the image in the subject must have the same spacing and shape. The BODY mask
-            should be ready.
-        """
-        subject = tio.transforms.ToCanonical()(subject)  # type: ignore
-        # now the slices are from inferior to superior
-        xy_size = np.asarray(desired_xy_size)
-        id = subject['ID']
-        img = subject['BODY']
+    def find_top_and_bottom(self,
+                            img: tio.ScalarImage) -> Tuple[int, int, np.ndarray]:
+        """Determine the slice range which contains the ROIs."""
         img_shape = np.asarray(img.spatial_shape)
-        half_xy = (xy_size / 2).astype(int)
         voxel_size = img.spacing
         n_slices = img_shape[-1]  # assume the last dimension is slice
         bottom = n_slices - 1
@@ -289,6 +280,23 @@ class MultiModalProcessor():
                 # center = np.array([img_shape[]])
                 break
         top = max(0, int(bottom - _BOX_RANGE / voxel_size[-1]))
+        return top, bottom, center
+
+    def find_bounding_box_and_crop(self, subject: tio.Subject,
+                                   desired_xy_size: Tuple[int, int]) -> tio.Subject:
+        """Determine the bounding box and crop it from the images.
+        All the image in the subject must have the same spacing and shape. The BODY mask
+            should be ready.
+        """
+        subject = tio.transforms.ToCanonical()(subject)  # type: ignore
+        # now the slices are from inferior to superior
+        xy_size = np.asarray(desired_xy_size)
+        id = subject['ID']
+        img = subject['BODY']
+        img_shape = np.asarray(img.spatial_shape)
+        voxel_size = img.spacing
+        half_xy = (xy_size / 2).astype(int)
+        top, bottom, center = self.find_top_and_bottom(img=img)
         assert all(center >= half_xy), f'{center} of {id} is too close to edge.'
         assert all(np.asarray(img_shape[0:2]) - center >= half_xy), f'{center} of {id} is too close to edge.'
         # make sure center is sufficiently away from edges
@@ -328,19 +336,15 @@ class MultiModalProcessor():
             print(f'Starting preprocessing for {patient_id}')
             # apply resampling
             print('\t Resampling images ...')
-            subject = self.resample_to_reference(subject, _IMG_XYSIZE_BEFORE_CROPPING)
+            subject = self.resample_to_reference(subject, IMG_XYSIZE_BEFORE_CROPPING)
             # create body mask
-            subject = self.create_body_mask(subject, thresholds=_BODY_THRESHOLD)
+            subject = self.create_body_mask(subject, thresholds=BODY_THRESHOLD)
             # cropping image
             print('\t cropping images ...')
             subject = self.find_bounding_box_and_crop(subject, desired_xy_size=xy_size)
             # apply normalization
             print('\t Normalizing images ...')
             subject = normalizator(subject)
-            # # generate weight maps
-            # print('\t Generating weight maps ...')
-            # subject = self.create_weight(subject, weight_modality,  # type: ignore
-            #                              weight_threshold, edge=_EDGE_SLICE)
             # save data
             print('\t Saving data ...')
             for modality in self.modalities:

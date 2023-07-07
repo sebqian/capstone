@@ -18,12 +18,11 @@ from typing import Any, Dict
 from etils import epath
 
 from torch.utils.data import DataLoader
-from monai.data import CacheDataset, Dataset
+from monai.data import Dataset
 from monai.transforms import (
     RandFlipd,
     RandRotated,
     Compose,
-    AsDiscreted,
     LoadImaged,
     EnsureTyped,
 )
@@ -40,12 +39,15 @@ _TRANSFORM_DICT = {'flip': {'p': 0.5, 'axes': ('LR', 'AP')},
 
 class MedicalImageDataModule(pl.LightningDataModule):
     """Image Data Module"""
-    def __init__(self, task_type: term.ProblemType, root_dir: epath.Path,
-                 experiment_config: Dict[str, Any], train_config: Dict[str, Any],
-                 valid_config: Dict[str, Any], test_config: Dict[str, Any],
+    def __init__(self, task_type: term.ProblemType,
+                 config: Dict[str, Any],
                  transform_dict: Dict[str, Any] = _TRANSFORM_DICT):
         super().__init__()
         self.task_type = task_type
+        experiment_config = config['experiment']
+        train_config = config['train']
+        valid_config = config['valid']
+        test_config = config['test']
         self.task = experiment_config['name']
         self.train_batch_size = train_config['batch_size']
         self.valid_batch_size = valid_config['batch_size']
@@ -119,16 +121,14 @@ class MedicalImageDataModule(pl.LightningDataModule):
                             range_y=transform_dict['rotate']['radians'][1],
                             range_z=transform_dict['rotate']['radians'][2],
                             padding_mode='border'),
-                EnsureTyped(keys=['input', 'label']),
-                AsDiscreted(keys=['label'], threshold=0.5)  # keep one-hot format
+                EnsureTyped(keys=['input', 'label'])  # Note: label not in one-hot form
             ]
         )
 
         valid_augmentation = Compose(
             [
                 LoadImaged(keys=['input', 'label']),
-                EnsureTyped(keys=['input', 'label']),
-                AsDiscreted(keys=['label'], threshold=0.5)  # keep one-hot format
+                EnsureTyped(keys=['input', 'label'])
             ]
         )
         return train_augmentation, valid_augmentation

@@ -1,0 +1,68 @@
+experiment:
+  data_path: /workspace/codebase/preprocessor/images/test_data/processed_256x256/subvolume_32
+  data_type: subvolume
+  name: hecktor_test
+loss:
+  include_background: true
+  name: generalized_dice_focal_loss
+  sigmoid: false
+  softmax: true
+  to_onehot_y: true
+metric:
+  activate: false
+  get_not_nans: false
+  ignore_empty: true
+  include_background: false
+  name: dice
+  num_classes: 3
+  reduction: mean
+  sigmoid: false
+  softmax: true
+model:
+  architecture:
+    blocks_down:
+    - 1
+    - 2
+    - 2
+    - 4
+    - 4
+    blocks_up:
+    - 1
+    - 1
+    - 1
+    - 1
+    init_filters: 32
+    use_conv_final: true
+  dropout: 0.3
+  input_channel: 2
+  name: segresnet
+  output_channel: 3
+  output_type: logits
+  spatial_dim: 3
+  x: 256
+  y: 256
+  z: 32
+test:
+  batch_size: 2
+  include: false
+train:
+  batch_size: 2
+  callbacks: null
+  epochs: 5
+  logging_frequency_steps: 5
+  lr: 0.01
+  lr_scheduler: poly
+  max_queue_length: 50
+  momentum: 0.9
+  nesterov: false
+  num_steps: 100
+  num_workers: 16
+  samples_per_volume: 4
+  start_epoch: 0
+  use_balanced_weights: false
+  weight_decay: 0.0005
+valid:
+  batch_size: 2
+  max_queue_length: 50
+  num_workers: 16
+  samples_per_volume: 4

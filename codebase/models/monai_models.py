@@ -24,8 +24,8 @@ def get_model(
             out_channels=out_channels,
             dropout_prob=dropout_prob,
             use_conv_final=network_config['use_conv_final'],
-            blocks_down=network_config['blocks_down'],
-            blocks_up=network_config['blocks_up'],
+            blocks_down=tuple(network_config['blocks_down']),
+            blocks_up=tuple(network_config['blocks_up']),
         )
 
     elif model_name == 'unet':
