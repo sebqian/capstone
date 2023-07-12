@@ -1,26 +1,14 @@
 """Metrics from Manai package."""
 from typing import Any, Callable, Dict
-from monai.metrics import meandice, generalized_dice
+from monai import metrics
 
 
-def get_segmentation_metrics(config: Dict[str, Any],
-                             is_test: bool = False) -> Callable:
+def get_segmentation_metrics(config: Dict[str, Any]) -> Callable:
     """Return a segmentation loss."""
     reduction = config['reduction']
-    sigmoid = config['sigmoid']
-    softmax = config['softmax']
-    activate = config['activate']
-    if is_test:
-        reduction = 'none'
-        softmax = False
-        sigmoid = False
-        activate = False
     # Default to dice
-    metric = meandice.DiceHelper(
+    metric = metrics.DiceMetric(
         include_background=config['include_background'],
-        sigmoid=sigmoid,
-        softmax=softmax,
-        activate=activate,
         ignore_empty=config['ignore_empty'],
         reduction=reduction,
         get_not_nans=config['get_not_nans'],
@@ -29,7 +17,7 @@ def get_segmentation_metrics(config: Dict[str, Any],
     metric_name = config['name']
     if metric_name == 'generalized_dice':
         print('Use generalized dice metrics.')
-        metric = generalized_dice.GeneralizedDiceScore(
+        metric = metrics.GeneralizedDiceScore(
             include_background=config['include_background'],
             reduction=reduction,
             )  # default

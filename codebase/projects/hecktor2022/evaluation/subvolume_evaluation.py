@@ -14,7 +14,7 @@ from monai.networks import utils
 
 from codebase import terminology as term
 from codebase.projects.hecktor2022 import read_config
-from lightning_module import seg_model_module
+from codebase.lightning_module import seg_model_module
 from codebase.dataloader.images import data_module
 
 
@@ -82,7 +82,7 @@ class SubVolumeEvaluationModule():
         label_data = label_data[None, ...]  # create batch dimension
         label_data = utils.one_hot(
             labels=label_data, num_classes=self.configs['metric']['num_classes'],
-            dim=1)   
+            dim=1)
         return input_data, label_data
 
     def evaluate_an_example(self, id: str, print_nonzeros: bool = False
@@ -98,6 +98,7 @@ class SubVolumeEvaluationModule():
             ValueError: required files can't be found
         """
         example_input, example_label = self.get_features_and_label(id)
+        print(example_input.shape)
         label_sum = torch.sum(example_label, dim=(0, 2, 3))
         prediction = self.model(example_input)
         predict_sum = torch.sum(prediction, dim=(0, 2, 3))

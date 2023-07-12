@@ -1,5 +1,5 @@
 experiment:
-    name: hecktor_exp070723_segresent
+    name: hecktor_exp070923_segresnet
     data_path: /workspace/data/hecktor2022/processed_256x256/subvolume_32
     data_type: subvolume  # choices=['subvolume', 'patches']
 model:
@@ -18,7 +18,7 @@ model:
         blocks_down: [1, 2, 2, 4, 4]  # yaml only supports list
         blocks_up: [1, 1, 1, 1]
 loss:
-    name: dicefocal
+    name: dice_ce
     include_background: false
     sigmoid: false
     softmax: true
@@ -27,12 +27,12 @@ metric:
     name: dice
     include_background: false
     num_classes: 3
-    reduction: mean
+    reduction: none
     get_not_nans: false
-    ignore_empty: true
+    ignore_empty: false
     activate: false
     sigmoid: false
-    softmax: true
+    softmax: false
 train:
     max_queue_length: 50
     samples_per_volume: 4
@@ -42,7 +42,7 @@ train:
     batch_size: 2
     num_steps: 100
     use_balanced_weights: false
-    lr: 0.002
+    lr: 0.0002
     lr_scheduler: "poly"     #choices=['poly', 'step', 'cos']
     momentum: 0.9
     weight_decay: 0.0005

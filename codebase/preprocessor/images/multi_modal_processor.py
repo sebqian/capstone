@@ -15,11 +15,18 @@ import codebase.terminology as term
 
 _MAX_HU = 1024
 _MIN_HU = -1024
-_N_LABLES = 3
+_MIN_SUV_RATIO = 0.05
 _BOX_RANGE = 310.0  # in mm
-BODY_THRESHOLD = {term.Modality.CT: (-300, 300), term.Modality.PET: (0.5, 9999)}
+BODY_THRESHOLD = {term.Modality.CT: (-300, 1000), term.Modality.PET: (0.5, 9999)}
 IMG_XYSIZE_BEFORE_CROPPING = (512, 512)
 _MIN_PIXELS_BRAIN_SLICE = 10000  # minimum # of pixels when we call it's start of brain
+
+
+class SigmoidTransform(tio.Transform):
+    def apply_transform(self, sample: tio.Subject) -> tio.Subject:
+        for image_name, image in sample.get_images(intensity_only=True).items():
+            image.set_data(torch.sigmoid(image.data))
+        return sample
 
 
 def _pet_remove_background(x: torch.Tensor) -> torch.Tensor:
@@ -36,6 +43,7 @@ def _pet_remove_background(x: torch.Tensor) -> torch.Tensor:
 def _pet_normalize_to_brain(x: torch.Tensor) -> torch.Tensor:
     """Normalize PET images by the brain uptake.
     The image must be cropped again, with the last slice already in brain.
+    In other words, this method onlys applies to the image in the bounding box.
     """
     # assume image in canoical direction, last 3 slices are brain.
     # use PET threshold 0.5
@@ -43,7 +51,9 @@ def _pet_normalize_to_brain(x: torch.Tensor) -> torch.Tensor:
     mean_value = torch.mean(selected_elements)
     # assert mean_value > 1, f'Mean value of brain SUV is too small: {mean_value}'
     print(f'\t\t Brain mean SUV estimation {mean_value}')
-    return x / mean_value
+    x /= mean_value  # normalization
+    clamped_x = torch.where(x < _MIN_SUV_RATIO, torch.tensor(0.0), x)
+    return clamped_x
 
 
 def _find_subvolume_index(
@@ -159,11 +169,12 @@ class MultiModalProcessor():
                 scalar_img = subject[modality.value]
                 print(f'\t {modality.value}: Shape - {scalar_img.shape}; Spacing - {scalar_img.spacing}.')
 
-    def resample_to_reference(self, subject: tio.Subject) -> tio.Subject:
+    def resample_to_reference(self, subject: tio.Subject,
+                              xy_size: Tuple[int, int] = IMG_XYSIZE_BEFORE_CROPPING) -> tio.Subject:
         """Assume all the volumes are already co-registered."""
         ref_img = subject[self.reference.value]
         image_size = ref_img.spatial_shape
-        resize_for_ref = tio.transforms.Resize(image_size)
+        resize_for_ref = tio.transforms.Resize((xy_size[0], xy_size[1], image_size[-1]))
         ref_img = resize_for_ref(ref_img)
         resample_transform = tio.transforms.Resample(target=ref_img)  # type: ignore
         return tio.Subject(resample_transform(subject))
@@ -241,7 +252,8 @@ class MultiModalProcessor():
                                  include=[term.Modality.CT.value]),
         )
         transform_collection.append(
-            tio.transforms.RescaleIntensity(out_min_max=(-1, 1),
+            tio.transforms.RescaleIntensity(out_min_max=(0, 1),
+                                            in_min_max=(_MIN_HU, _MAX_HU),
                                             include=[term.Modality.CT.value]),
         )
         # PET only
@@ -249,9 +261,17 @@ class MultiModalProcessor():
             tio.transforms.Lambda(function=_pet_normalize_to_brain,
                                   include=[term.Modality.PET.value])
         )
-        exclude_types = [term.Modality.CT.value, term.Modality.PET.value, 'LABEL', 'BODY', 'WEIGHT']
         transform_collection.append(tio.transforms.ZNormalization(
-            masking_method=tio.ZNormalization.mean, exclude=exclude_types))
+             masking_method=tio.ZNormalization.mean,
+             include=[term.Modality.PET.value]))
+        sigmoid_transform = tio.transforms.Lambda(
+            function=lambda x: torch.sigmoid(x),
+            include=[term.Modality.PET.value])
+        transform_collection.append(sigmoid_transform)
+
+        # exclude_types = [term.Modality.CT.value, term.Modality.PET.value, 'LABEL', 'BODY', 'WEIGHT']
+        # transform_collection.append(tio.transforms.ZNormalization(
+        #     masking_method=tio.ZNormalization.mean, exclude=exclude_types))
         transform_comp = tio.transforms.Compose(transform_collection)
         return transform_comp
 
@@ -336,7 +356,7 @@ class MultiModalProcessor():
             print(f'Starting preprocessing for {patient_id}')
             # apply resampling
             print('\t Resampling images ...')
-            subject = self.resample_to_reference(subject, IMG_XYSIZE_BEFORE_CROPPING)
+            subject = self.resample_to_reference(subject)
             # create body mask
             subject = self.create_body_mask(subject, thresholds=BODY_THRESHOLD)
             # cropping image
@@ -350,7 +370,7 @@ class MultiModalProcessor():
             for modality in self.modalities:
                 filename = output_folder / 'images' / f'{patient_id}__{modality.value}.nii.gz'
                 subject[modality.value].save(filename)
-            filename = output_folder / 'images' / f'{patient_id}__WEIGHT.nii.gz'
+            # filename = output_folder / 'images' / f'{patient_id}__WEIGHT.nii.gz'
             # subject['WEIGHT'].save(filename)
             filename = output_folder / 'labels' / f'{patient_id}.nii.gz'
             subject['LABEL'].save(filename)

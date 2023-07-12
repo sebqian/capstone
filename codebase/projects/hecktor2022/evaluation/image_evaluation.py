@@ -8,11 +8,12 @@ from etils import epath
 import torch
 import torchio as tio
 import pytorch_lightning as pl
+from pytorch_lightning.utilities.model_summary import ModelSummary
 
 from monai.inferers.utils import sliding_window_inference
 from monai.metrics import meandice
 
-from lightning_module import seg_model_module
+from codebase.lightning_module import seg_model_module
 from codebase.preprocessor.images import multi_modal_processor
 from codebase import terminology as term
 from codebase.projects.hecktor2022 import read_config
@@ -52,6 +53,7 @@ class ImageEvaluationModule():
             hparams=self.configs,
             optimizer_class=torch.optim.AdamW
         )
+        print(ModelSummary(self.model))
         self.trainer = pl.Trainer()
 
         self.subvolume_size = subvolume_size
@@ -244,7 +246,7 @@ class ImageEvaluationModule():
         label_data = subject['LABEL'].data
         axes[2].imshow(label_data[0, ..., nslice].cpu().numpy(), cmap='viridis', vmin=vmin, vmax=vmax)
         axes[2].set_title('Label', pad=10, verticalalignment='bottom')
-        prediction = subject['PREDICTION'].data
+        prediction = subject['PREDICT'].data
         axes[3].imshow(prediction[0, ..., nslice].cpu().numpy(), cmap='viridis', vmin=vmin, vmax=vmax)
         axes[3].set_title('Prediction', pad=10, verticalalignment='bottom')
         plt.tight_layout()

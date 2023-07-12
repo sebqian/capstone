@@ -3,8 +3,8 @@ experiment:
   data_type: subvolume
   name: hecktor_test
 loss:
-  include_background: true
-  name: generalized_dice_focal_loss
+  include_background: false
+  name: dice_ce
   sigmoid: false
   softmax: true
   to_onehot_y: false
@@ -15,9 +15,9 @@ metric:
   include_background: false
   name: dice
   num_classes: 3
-  reduction: mean
+  reduction: none
   sigmoid: false
-  softmax: true
+  softmax: false
 model:
   architecture:
     blocks_down:
@@ -48,9 +48,9 @@ test:
 train:
   batch_size: 2
   callbacks: null
-  epochs: 5
+  epochs: 80
   logging_frequency_steps: 5
-  lr: 0.01
+  lr: 0.0002
   lr_scheduler: poly
   max_queue_length: 50
   momentum: 0.9

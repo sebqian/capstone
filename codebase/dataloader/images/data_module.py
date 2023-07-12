@@ -20,6 +20,7 @@ from etils import epath
 from torch.utils.data import DataLoader
 from monai.data import Dataset
 from monai.transforms import (
+    AsDiscreted,
     RandFlipd,
     RandRotated,
     Compose,
@@ -30,10 +31,10 @@ import pytorch_lightning as pl
 
 import codebase.terminology as term
 
-_TRANSFORM_DICT = {'flip': {'p': 0.5, 'axes': ('LR', 'AP')},
+_TRANSFORM_DICT = {'flip': {'p': 0.5, 'axes': (0, 1)},
                    # ration range has to consider whether the channel exist or not
                    # because the transform assues no channels
-                   'rotate': {'radians': [0, 0.5, 0.5], 'p': 0.8},
+                   'rotate': {'radians': [0.5, 0.5, 0.0], 'p': 0.8},
                    'affine': {'p': 0.5, 'degrees': 0.5, 'translation': 0.3}}
 
 
@@ -44,17 +45,15 @@ class MedicalImageDataModule(pl.LightningDataModule):
                  transform_dict: Dict[str, Any] = _TRANSFORM_DICT):
         super().__init__()
         self.task_type = task_type
-        experiment_config = config['experiment']
-        train_config = config['train']
-        valid_config = config['valid']
-        test_config = config['test']
-        self.task = experiment_config['name']
-        self.train_batch_size = train_config['batch_size']
-        self.valid_batch_size = valid_config['batch_size']
-        self.train_num_workers = train_config['num_workers']
-        self.valid_num_workers = valid_config['num_workers']
-        self.include_test = test_config['include']
-        self.base_dir = epath.Path(experiment_config['data_path'])
+        self.configs = config
+        self.task = self.configs['experiment']['name']
+        self.train_batch_size = self.configs['train']['batch_size']
+        self.valid_batch_size = self.configs['valid']['batch_size']
+        self.test_batch_size = self.configs['test']['batch_size']
+        self.train_num_workers = self.configs['train']['num_workers']
+        self.valid_num_workers = self.configs['valid']['num_workers']
+        self.include_test = self.configs['test']['include']
+        self.base_dir = epath.Path(self.configs['experiment']['data_path'])
         self.train_ids = []
         self.valid_ids = []
         self.test_ids = []
@@ -113,7 +112,8 @@ class MedicalImageDataModule(pl.LightningDataModule):
         train_augmentation = Compose(
             [
                 LoadImaged(keys=['input', 'label']),
-                RandFlipd(keys=['input', 'label'], prob=transform_dict['flip']['p']),
+                RandFlipd(keys=['input', 'label'], prob=transform_dict['flip']['p'],
+                          spatial_axis=transform_dict['flip']['axes']),
                 # RandAffined(keys=['input', 'label'], prob=transform_dict['affine']['p'],
                 #             rotate_range=transform_dict['affine']['degrees'],),
                 RandRotated(keys=['input', 'label'], prob=transform_dict['rotate']['p'],
@@ -121,23 +121,26 @@ class MedicalImageDataModule(pl.LightningDataModule):
                             range_y=transform_dict['rotate']['radians'][1],
                             range_z=transform_dict['rotate']['radians'][2],
                             padding_mode='border'),
-                EnsureTyped(keys=['input', 'label'])  # Note: label not in one-hot form
+                EnsureTyped(keys=['input', 'label']),  # Note: label not in one-hot form
+                AsDiscreted(keys=['label'], to_onehot=self.configs['metric']['num_classes'])
             ]
         )
 
         valid_augmentation = Compose(
             [
                 LoadImaged(keys=['input', 'label']),
-                EnsureTyped(keys=['input', 'label'])
+                EnsureTyped(keys=['input', 'label']),
+                AsDiscreted(keys=['label'], to_onehot=self.configs['metric']['num_classes'])
             ]
         )
         return train_augmentation, valid_augmentation
 
     def train_dataloader(self):
-        return DataLoader(self.train_set, self.train_batch_size, num_workers=self.train_num_workers)
+        return DataLoader(self.train_set, self.train_batch_size, num_workers=self.train_num_workers,
+                          shuffle=True)
 
     def val_dataloader(self):
         return DataLoader(self.val_set, self.valid_batch_size, num_workers=self.valid_num_workers)
 
     def test_dataloader(self):
-        return DataLoader(self.test_set, self.valid_batch_size, num_workers=self.valid_num_workers)
+        return DataLoader(self.test_set, self.test_batch_size, num_workers=self.valid_num_workers)
