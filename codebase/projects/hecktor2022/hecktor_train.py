@@ -1,5 +1,5 @@
 """Train hecktor model in pytorch ligntning style."""
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from etils import epath
 
 import argparse
@@ -75,7 +75,7 @@ def get_callbacks(save_top_k: int) -> List[Callback]:
 
 
 # def main(hparams: argparse.Namespace):
-def main(config_file: epath.Path):
+def main(config_file: epath.Path, checkpoint_path: Optional[str]):
     config = read_config.read_experiment_config(config_file)
     base_dir = epath.Path(config['experiment']['data_path'])
     experiment_name = config['experiment']['name']
@@ -98,7 +98,7 @@ def main(config_file: epath.Path):
                          )
     # tuner = Tuner(trainer)
     # tuner.lr_find(model)
-    trainer.fit(model, datamodule=mdata)
+    trainer.fit(model, datamodule=mdata, ckpt_path=checkpoint_path)
 
 
 if __name__ == "__main__":

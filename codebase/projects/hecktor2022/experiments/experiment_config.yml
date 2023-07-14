@@ -37,12 +37,12 @@ train:
     max_queue_length: 50
     samples_per_volume: 4
     num_workers: 16
-    epochs: 64
+    epochs: 100
     start_epoch: 0
     batch_size: 2
     num_steps: 100
     use_balanced_weights: false
-    lr: 0.0002
+    lr: 0.00005
     lr_scheduler: "poly"     #choices=['poly', 'step', 'cos']
     momentum: 0.9
     weight_decay: 0.0005

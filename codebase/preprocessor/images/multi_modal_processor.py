@@ -22,13 +22,6 @@ IMG_XYSIZE_BEFORE_CROPPING = (512, 512)
 _MIN_PIXELS_BRAIN_SLICE = 10000  # minimum # of pixels when we call it's start of brain
 
 
-class SigmoidTransform(tio.Transform):
-    def apply_transform(self, sample: tio.Subject) -> tio.Subject:
-        for image_name, image in sample.get_images(intensity_only=True).items():
-            image.set_data(torch.sigmoid(image.data))
-        return sample
-
-
 def _pet_remove_background(x: torch.Tensor) -> torch.Tensor:
     """Mask the patient body in PET image."""
     print(x.max())
@@ -369,11 +362,11 @@ class MultiModalProcessor():
             print('\t Saving data ...')
             for modality in self.modalities:
                 filename = output_folder / 'images' / f'{patient_id}__{modality.value}.nii.gz'
-                subject[modality.value].save(filename)
+                subject[modality.value].save(filename)  # type: ignore
             # filename = output_folder / 'images' / f'{patient_id}__WEIGHT.nii.gz'
             # subject['WEIGHT'].save(filename)
             filename = output_folder / 'labels' / f'{patient_id}.nii.gz'
-            subject['LABEL'].save(filename)
+            subject['LABEL'].save(filename)  # type: ignore
             n += 1
         return n
 
