@@ -76,7 +76,6 @@ class SegmentationModelModule(pl.LightningModule):
     def prepare_batch(self,
                       batch: Dict[str, torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor]:
         images = batch['input']
-        images[:, 1, ...] = images[:, 1, ...] / 5.0  # TODO: move normalization into preprocessing
         return images, batch['label']
 
     def forward(self, x: torch.Tensor):

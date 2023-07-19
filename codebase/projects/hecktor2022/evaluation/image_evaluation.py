@@ -147,11 +147,14 @@ class ImageEvaluationModule():
 
     def case_predict(self, id: str):
         """Predict for a single case."""
+        print(f'Create prediction for {id}:')
         subject = self.create_subject(id)
         # ensure the orientation
         ref_image = subject[self.ref_modality.value]
         original_orientation = ref_image.orientation
+        original_shape = ref_image.spatial_shape
         affine = ref_image.affine
+        print(f"\t Original shape: {original_shape}")
         print(f"\t Original orientation: {original_orientation}")
         subject = tio.transforms.ToCanonical()(subject)
         # record the original data shape and affine
@@ -162,10 +165,12 @@ class ImageEvaluationModule():
         images = [processed_subject[modality.value].data[0] for modality in self.modalities]
         image_tensor = torch.stack(images, dim=0)  # add channel
         image_tensor = image_tensor[None, ...]  # add batch
+        print(f"\t Input tensor shape: {image_tensor.shape}")
         one_hot_prediction = sliding_window_inference(
             image_tensor.to(self.device), roi_size=list(self.subvolume_size), sw_batch_size=4, predictor=self.model,
             progress=True)
         roi_prediction = torch.argmax(one_hot_prediction, dim=1).squeeze(0)  # type: ignore
+        print(f"\t Output tensor shape: {roi_prediction.shape}")
         xstart = center[0] - self.subvolume_size[0] // 2
         xstop = center[0] + self.subvolume_size[0] // 2
         ystart = center[1] - self.subvolume_size[1] // 2
@@ -198,38 +203,43 @@ class ImageEvaluationModule():
     def calculate_dice(self, ids: List[str]) -> np.ndarray:
         """Evaluates dice between the prediction and label for the whole image of an id."""
         # load prediction and label
-        predictions = []
-        labels = []
+        dices = []
         for id in ids:
             subject = self.get_prediction_label_pair(id)
-            predictions.append(self.one_hot_transform(subject['PREDICT']).tensor)  # type: ignore
-            labels.append(self.one_hot_transform(subject['LABEL']).tensor)  # type: ignore
-
-        # metrics input should be a list of channel-first tensors
-        dice = self.test_metrics(predictions, labels).cpu().numpy()  # type: ignore
-        print(f'Average dice {dice[0]}')
+            prediction = self.one_hot_transform(subject['PREDICT']).tensor  # type: ignore
+            label = self.one_hot_transform(subject['LABEL']).tensor  # type: ignore
+            dice = self.test_metrics([prediction], [label]).cpu().numpy()  # type: ignore
+            print(f'\t Dice: {dice}')
+            dices.append(dice)
+        dices = np.concatenate(dices, axis=0)
+        print(f'Average dice {np.mean(dices, axis=0)}')
         # print(f'{id}: GTVp dice {dice[0]}; GTVn dice {dice[1]}')
-        return dice[0]
+        return dices
 
-    def get_prediction_label_pair(self, id: str, print_nonzeros: bool = False
+    def get_prediction_label_pair(self, id: str, print_nonzeros: bool = False,
+                                  load_images: bool = False,
                                   ) -> tio.Subject:
+        print(f'Loading data for {id}:')
         pred_file = self.data_path / 'preds' / (id + '__predict.nii.gz')
         prediction = tio.LabelMap(pred_file)
+        print(f'\t Prediction shape: {prediction.shape}')
         label_file = self.data_path / 'labels' / (id + '.nii.gz')
         label = tio.LabelMap(label_file)
+        print(f'\t Label shape: {label.shape}')
+        subject = tio.Subject({'LABEL': label, 'PREDICT': prediction})
         if print_nonzeros:
             label_sum = torch.sum(label.data, dim=(0, 1, 2))
             print(f'Nonzero label slices: {torch.nonzero(label_sum).flatten().cpu().numpy()}')
             predict_sum = torch.sum(prediction.data, dim=(0, 1, 2))
             print(f'Nonzero prediction slices: {torch.nonzero(predict_sum).flatten().cpu().numpy()}')
-        img_file = self.data_path / 'images' / (id + '__CT.nii.gz')
-        ct = tio.ScalarImage(img_file)
-        img_file = self.data_path / 'images' / (id + '__PT.nii.gz')
-        pet = tio.ScalarImage(img_file)
-        resize_for_ref = tio.transforms.Resize(ct.spatial_shape)
-        pet = resize_for_ref(pet)
-        subject = tio.Subject({'LABEL': label, 'PREDICT': prediction,
-                               'CT': ct, 'PT': pet})
+        if load_images:
+            img_file = self.data_path / 'images' / (id + '__CT.nii.gz')
+            ct = tio.ScalarImage(img_file)
+            img_file = self.data_path / 'images' / (id + '__PT.nii.gz')
+            pet = tio.ScalarImage(img_file)
+            subject['CT'] = ct
+            subject['PT'] = pet
+        subject = tio.transforms.Resample(target=prediction)(subject)
         return subject
 
     def comparison_plot(self, subject: tio.Subject, nslice: int):

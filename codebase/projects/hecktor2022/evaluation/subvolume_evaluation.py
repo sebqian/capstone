@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import torch
 import pytorch_lightning as pl
-from monai.metrics import meandice
+from monai.metrics import DiceMetric, SurfaceDiceMetric
 from monai.networks import utils
 
 from codebase import terminology as term
@@ -40,6 +40,7 @@ class SubVolumeEvaluationModule():
             hparams=self.configs,
             optimizer_class=torch.optim.AdamW
         )
+        self.model.freeze()
         self.trainer = pl.Trainer()
 
         # create test dataset
@@ -52,13 +53,18 @@ class SubVolumeEvaluationModule():
         mdata.setup()
         self.test_dataloader = mdata.test_dataloader()
 
-        self.test_metrics = meandice.DiceMetric(
+        self.test_metrics = DiceMetric(
             include_background=False,
             reduction='none',
             get_not_nans=False,
-            ignore_empty=False,
+            ignore_empty=True,
             num_classes=self.configs['metric']['num_classes']
         )
+        # self.test_metrics = SurfaceDiceMetric(
+        #     class_thresholds=[2, 2],
+        #     include_background=False,
+        #     reduction='none'
+        # )
 
     def run_cohort_test(self):
         """Run through the test subvolumes with existing labels."""
@@ -98,13 +104,15 @@ class SubVolumeEvaluationModule():
             ValueError: required files can't be found
         """
         example_input, example_label = self.get_features_and_label(id)
-        print(example_input.shape)
-        label_sum = torch.sum(example_label, dim=(0, 2, 3))
-        prediction = self.model(example_input)
-        predict_sum = torch.sum(prediction, dim=(0, 2, 3))
-        result = self.test_metrics([prediction], [example_label]).cpu().numpy()  # type: ignore
-        print(f'{id}: {result[0]}')
+        # print(example_input.shape, example_label.shape)
+        with torch.no_grad():
+            prediction = self.model(example_input)
+        # print(prediction.shape)
+        result = self.test_metrics(prediction, example_label).cpu().numpy()  # type: ignore
+        print(f'{id}: {result}')
         if print_nonzeros:
+            label_sum = torch.sum(example_label, dim=(0, 2, 3))
+            predict_sum = torch.sum(prediction, dim=(0, 2, 3))
             print(f'Nonzero label slices: {torch.nonzero(label_sum[1:, :]).cpu().numpy()}')
             print(f'Nonzero prediction slices: {torch.nonzero(predict_sum[1:, :]).cpu().numpy()}')
         return example_input, prediction, example_label, result[0]

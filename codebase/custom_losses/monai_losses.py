@@ -53,11 +53,13 @@ def get_segmentation_loss(config: Dict[str, Any]) -> Callable:
             use_softmax=config['softmax']
         )
     if name == 'dice_ce':
-        print('Use Dice CrossEntryo loss')
+        print('Use Dice CrossEntropy loss')
         loss = dice.DiceCELoss(
             include_background=config['include_background'],
             to_onehot_y=config['to_onehot_y'],
             sigmoid=config['sigmoid'],
             softmax=config['softmax'],
+            squared_pred=True,
+            lambda_ce=0.5,
         )
     return loss
