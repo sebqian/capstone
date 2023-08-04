@@ -28,17 +28,13 @@ def get_model_module(config: Dict[str, Any]) -> pl.LightningModule:
     """Generates the model module."""
 
     if _PRINT_MODEL_SUMMARY:
-        spatial_size = (config['model']['x'],
-                        config['model']['y'],
-                        config['model']['z'])
-        input_size = (config['model']['input_channel'],
-                      config['model']['x'],
-                      config['model']['y'],
-                      config['model']['z'])
+        spatial_size = config['model']['spatial_size']
+        input_size = config['model']['input_channel'] + config['model']['spatial_size']
         print(f'Input spatial size: {spatial_size}')
 
         monai_model = monai_models.get_model(
                 model_name=config['model']['name'],
+                img_size=spatial_size,
                 output_type=config['model']['output_type'],
                 spatial_dims=config['model']['spatial_dims'],
                 in_channels=config['model']['input_channel'],

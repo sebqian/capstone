@@ -1,12 +1,19 @@
 """Losses from Manai package."""
 from typing import Any, Callable, Dict
-from monai.losses import dice, tversky, focal_loss
+from monai.losses import (
+    DiceLoss,
+    DiceCELoss,
+    DiceFocalLoss,
+    MaskedDiceLoss,
+    GeneralizedDiceFocalLoss,
+    TverskyLoss,
+    FocalLoss)
 
 
 def get_segmentation_loss(config: Dict[str, Any]) -> Callable:
     """Return a segmentation loss."""
     name = config['name']
-    loss = dice.DiceLoss(
+    loss = DiceLoss(
         include_background=config['include_background'],
         to_onehot_y=config['to_onehot_y'],
         sigmoid=config['sigmoid'],
@@ -14,7 +21,7 @@ def get_segmentation_loss(config: Dict[str, Any]) -> Callable:
         )  # default
     if name == 'dicefocal':
         print('Use dice focal loss')
-        loss = dice.DiceFocalLoss(
+        loss = DiceFocalLoss(
             include_background=config['include_background'],
             to_onehot_y=config['to_onehot_y'],
             sigmoid=config['sigmoid'],
@@ -22,14 +29,14 @@ def get_segmentation_loss(config: Dict[str, Any]) -> Callable:
         )
     if name == 'masked_dice':
         print('Use masked dice loss')
-        loss = dice.MaskedDiceLoss(
+        loss = MaskedDiceLoss(
             include_background=config['include_background'],
             sigmoid=config['sigmoid'],
             softmax=config['softmax']
         )
     if name == 'generalized_dice_focal_loss':
         print('Use generalized_dice_focal_loss')
-        loss = dice.GeneralizedDiceFocalLoss(
+        loss = GeneralizedDiceFocalLoss(
             include_background=config['include_background'],
             to_onehot_y=config['to_onehot_y'],
             sigmoid=config['sigmoid'],
@@ -37,7 +44,7 @@ def get_segmentation_loss(config: Dict[str, Any]) -> Callable:
         )
     if name == 'tversky_loss':
         print('Use tversky_loss')
-        loss = tversky.TverskyLoss(
+        loss = TverskyLoss(
             include_background=config['include_background'],
             to_onehot_y=config['to_onehot_y'],
             sigmoid=config['sigmoid'],
@@ -47,14 +54,14 @@ def get_segmentation_loss(config: Dict[str, Any]) -> Callable:
         )
     if name == 'focalloss':
         print('Use focal_loss')
-        loss = focal_loss.FocalLoss(
+        loss = FocalLoss(
             include_background=config['include_background'],
             to_onehot_y=config['to_onehot_y'],
             use_softmax=config['softmax']
         )
     if name == 'dice_ce':
         print('Use Dice CrossEntropy loss')
-        loss = dice.DiceCELoss(
+        loss = DiceCELoss(
             include_background=config['include_background'],
             to_onehot_y=config['to_onehot_y'],
             sigmoid=config['sigmoid'],

@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import torch
 import pytorch_lightning as pl
-from monai.metrics import DiceMetric, SurfaceDiceMetric
+from monai.metrics import DiceMetric
 from monai.networks import utils
 
 from codebase import terminology as term

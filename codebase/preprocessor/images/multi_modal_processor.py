@@ -13,11 +13,12 @@ import torchio as tio
 
 import codebase.terminology as term
 
-_MAX_HU = 1024
+_MAX_HU = 3000
 _MIN_HU = -1024
 _MIN_SUV_RATIO = 0.05
 _BOX_RANGE = 310.0  # in mm
-BODY_THRESHOLD = {term.Modality.CT: (-300, 1000), term.Modality.PET: (0.5, 9999)}
+# threshold on normalized image
+BODY_THRESHOLD = {term.Modality.CT: (0.2, 1.0), term.Modality.PET: (0.4, 1)}
 IMG_XYSIZE_BEFORE_CROPPING = (512, 512)
 _MIN_PIXELS_BRAIN_SLICE = 10000  # minimum # of pixels when we call it's start of brain
 
@@ -103,13 +104,15 @@ class MultiModalProcessor():
                  phase: term.Phase,
                  modalities: List[term.Modality],
                  reference: term.Modality,
-                 problem_type: term.ProblemType
+                 problem_type: term.ProblemType,
+                 desired_voxel_size: Tuple[float, float, float]
                  ) -> None:
         self.data_path = data_folder
         self.phase = phase
         self.modalities = modalities
         self.reference = reference
         self.problem_type = problem_type
+        self.desired_voxel_size = desired_voxel_size
 
     def get_patient_lists(self) -> List[str]:
         """Find the patients in a specific csv file with corresponding phase."""
@@ -139,9 +142,6 @@ class MultiModalProcessor():
             label = tio.ScalarImage(label_file)
         elif self.problem_type == term.ProblemType.SEGMENTATION:
             label = tio.LabelMap(label_file)
-            # if _N_LABLES > 1:
-            #     onehot_transform = tio.transforms.OneHot(num_classes=_N_LABLES)
-            #     label = onehot_transform(label)
         subject_dict['LABEL'] = label  # type: ignore
         subject = tio.Subject(subject_dict)
         return subject
@@ -162,15 +162,20 @@ class MultiModalProcessor():
                 scalar_img = subject[modality.value]
                 print(f'\t {modality.value}: Shape - {scalar_img.shape}; Spacing - {scalar_img.spacing}.')
 
+    # resampling voxels
     def resample_to_reference(self, subject: tio.Subject,
                               xy_size: Tuple[int, int] = IMG_XYSIZE_BEFORE_CROPPING) -> tio.Subject:
         """Assume all the volumes are already co-registered."""
-        ref_img = subject[self.reference.value]
-        image_size = ref_img.spatial_shape
-        resize_for_ref = tio.transforms.Resize((xy_size[0], xy_size[1], image_size[-1]))
-        ref_img = resize_for_ref(ref_img)
-        resample_transform = tio.transforms.Resample(target=ref_img)  # type: ignore
-        return tio.Subject(resample_transform(subject))
+        # resample reference image first.
+        # Don't resample the whole subject because for some patients CT shape != label shape
+        ref_image = tio.transforms.Resample(target=self.desired_voxel_size)(
+            subject[self.reference.value])
+        resampled_subject = tio.transforms.Resample(target=ref_image)(subject)  # type: ignore
+        # Crop to fixed shape except for slices
+        n_slice = resampled_subject[self.reference.value].spatial_shape[-1]  # type: ignore
+        resampled_subject = tio.transforms.CropOrPad(
+            target_shape=(xy_size[0], xy_size[1], n_slice))(resampled_subject)
+        return resampled_subject  # type: ignore
 
     def create_body_mask(self, subject: tio.Subject,
                          thresholds: Dict[term.Modality, Tuple[float, float]]) -> tio.Subject:
@@ -250,10 +255,10 @@ class MultiModalProcessor():
                                             include=[term.Modality.CT.value]),
         )
         # PET only
-        transform_collection.append(
-            tio.transforms.Lambda(function=_pet_normalize_to_brain,
-                                  include=[term.Modality.PET.value])
-        )
+        # transform_collection.append(
+        #     tio.transforms.Lambda(function=_pet_normalize_to_brain,
+        #                           include=[term.Modality.PET.value])
+        # )
         transform_collection.append(tio.transforms.ZNormalization(
              masking_method=tio.ZNormalization.mean,
              include=[term.Modality.PET.value]))
@@ -350,23 +355,23 @@ class MultiModalProcessor():
             # apply resampling
             print('\t Resampling images ...')
             subject = self.resample_to_reference(subject)
-            # create body mask
-            subject = self.create_body_mask(subject, thresholds=BODY_THRESHOLD)
-            # cropping image
-            print('\t cropping images ...')
-            subject = self.find_bounding_box_and_crop(subject, desired_xy_size=xy_size)
             # apply normalization
             print('\t Normalizing images ...')
             subject = normalizator(subject)
+            # create body mask
+            subject = self.create_body_mask(subject, thresholds=BODY_THRESHOLD)  # type: ignore
+            # cropping image
+            print('\t cropping images ...')
+            subject = self.find_bounding_box_and_crop(subject, desired_xy_size=xy_size)
             # save data
             print('\t Saving data ...')
             for modality in self.modalities:
                 filename = output_folder / 'images' / f'{patient_id}__{modality.value}.nii.gz'
-                subject[modality.value].save(filename)  # type: ignore
+                subject[modality.value].save(filename, squeeze=True)  # type: ignore
             # filename = output_folder / 'images' / f'{patient_id}__WEIGHT.nii.gz'
             # subject['WEIGHT'].save(filename)
             filename = output_folder / 'labels' / f'{patient_id}.nii.gz'
-            subject['LABEL'].save(filename)  # type: ignore
+            subject['LABEL'].save(filename, squeeze=True)  # type: ignore
             n += 1
         return n
 
@@ -434,18 +439,18 @@ class MultiModalProcessor():
                 filename = patient + '_' + str(idx) + '__label' + '.npy'
                 np.save(arr=subvolume_label.numpy(), file=(out_label_path / filename))
                 n_label_volumes += 1
-            n_nolabel_volumes = min(len(bad_index), n_label_volumes)
-            selected_bad_index = random.sample(bad_index, n_nolabel_volumes)
-            for idx in list(selected_bad_index):
-                slice_lower = idx - half_volume_size
-                slice_upper = slice_lower + subvolume_size
-                subvolume_img = image[:, :, :, slice_lower: slice_upper]
-                filename = patient + '_' + str(idx) + '__input' + '.npy'
-                np.save(arr=subvolume_img.numpy(), file=(out_img_path / filename))
-                subvolume_label = label[:, :, :, slice_lower: slice_upper]
-                filename = patient + '_' + str(idx) + '__label' + '.npy'
-                np.save(arr=subvolume_label.numpy(), file=(out_label_path / filename))
-            print(f'\t generate {n_label_volumes} labelled volumes and {n_nolabel_volumes} not labelled volumes.')
+            # n_nolabel_volumes = min(len(bad_index), n_label_volumes)
+            # selected_bad_index = random.sample(bad_index, n_nolabel_volumes)
+            # for idx in list(selected_bad_index):
+            #     slice_lower = idx - half_volume_size
+            #     slice_upper = slice_lower + subvolume_size
+            #     subvolume_img = image[:, :, :, slice_lower: slice_upper]
+            #     filename = patient + '_' + str(idx) + '__input' + '.npy'
+            #     np.save(arr=subvolume_img.numpy(), file=(out_img_path / filename))
+            #     subvolume_label = label[:, :, :, slice_lower: slice_upper]
+            #     filename = patient + '_' + str(idx) + '__label' + '.npy'
+            #     np.save(arr=subvolume_label.numpy(), file=(out_label_path / filename))
+            # print(f'\t generate {n_label_volumes} labelled volumes and {n_nolabel_volumes} not labelled volumes.')
 
     def calculate_volumes(self, data_path: epath.Path, output_file: str,
                           channels: List[int], column_names: List[str]):

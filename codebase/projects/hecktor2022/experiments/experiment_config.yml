@@ -1,33 +1,39 @@
 experiment:
-    name: hecktor_exp071823_segresnet
-    data_path: /workspace/data/hecktor2022/processed_256x256/subvolume_32
-    data_type: subvolume  # choices=['subvolume', 'patches']
+    name: hecktor_exp080223_segresnet
+    data_path: /workspace/data/hecktor2022/processed_256x256
+    data_type: patches  # choices=['subvolume', 'patches']
 model:
-    name: segresnet  # choices=['unet', 'segresnet']
+    name: segresnet  # choices=['unet', 'segresnet', 'swinUnetr']
     output_type: logits  # choices=['logits', 'sigmoid']
     spatial_dim: 3
-    x: 256
-    y: 256
-    z: 32
+    spatial_size: [128, 128, 64]
     input_channel: 2
     output_channel: 3
-    dropout: 0.3
+    dropout: 0.1
     architecture:
-        init_filters: 32
-        use_conv_final: true
-        blocks_down: [1, 2, 2, 4, 4]  # yaml only supports list
-        blocks_up: [1, 1, 1, 1]
+        segresnet:
+            init_filters: 32
+            use_conv_final: true
+            blocks_down: [1, 2, 2, 4, 4, 4]  # yaml only supports list
+            blocks_up: [1, 1, 1, 1, 1]
+        swinUnetr:
+            feature_size: 48
+            depths: [2, 2, 2, 2]
+            num_heads: [3, 6, 12, 24]
+            drop_rate: 0.2
+            attn_drop_rate: 0.2
+            use_v2: true
 loss:
     name: dice_ce
     include_background: false
     sigmoid: false
     softmax: true
-    to_onehot_y: false
+    to_onehot_y: true
 metric:
     name: dice
     include_background: false
     num_classes: 3
-    reduction: none
+    reduction: mean
     get_not_nans: false
     ignore_empty: false
     activate: false
@@ -37,15 +43,15 @@ train:
     max_queue_length: 50
     samples_per_volume: 4
     num_workers: 16
-    epochs: 128
+    epochs: 200
     start_epoch: 0
-    batch_size: 2
+    batch_size: 4
     num_steps: 100
     use_balanced_weights: false
-    lr: 0.000004
+    lr: 0.0002
     lr_scheduler: "poly"     #choices=['poly', 'step', 'cos']
     momentum: 0.9
-    weight_decay: 0.0005
+    weight_decay: 0.00001
     nesterov: false
     callbacks:
     logging_frequency_steps: 5
@@ -53,7 +59,7 @@ valid:
     max_queue_length: 50
     samples_per_volume: 4
     num_workers: 16
-    batch_size: 2
+    batch_size: 1
 test:
     include: false
-    batch_size: 2
+    batch_size: 1
