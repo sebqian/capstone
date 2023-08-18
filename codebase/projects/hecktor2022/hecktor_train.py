@@ -2,7 +2,6 @@
 from typing import Any, Dict, List
 from pathlib import Path
 import sys
-import argparse
 
 from absl import app
 from absl import flags
@@ -29,6 +28,8 @@ _UNET_CONFIG = {'channels': (16, 32, 64, 128, 256), 'strides': (2, 2, 2, 2), 'nu
 FLAGS = flags.FLAGS
 flags.DEFINE_string('config', None, 'Path to the experiment configuration file.')
 flags.DEFINE_string('checkpoint', None, 'Path to the checkpoint to load.')
+flags.DEFINE_integer('num_devices', 1, 'Number of GPUs')
+flags.DEFINE_integer('num_nodes', 1, 'Number of nodes in HPC')
 
 # Required flag.
 flags.mark_flag_as_required('config')
@@ -81,13 +82,10 @@ def get_callbacks(save_top_k: int) -> List[Callback]:
     return [checkpoint_callback, lr_monitor_callback]
 
 
-# def main(hparams: argparse.Namespace):
-# def main(config_file, checkpoint_file):
 def main(argv):
     del argv  # Unused
     FLAGS(sys.argv)  # no need for this line is app.run is working
     config = read_config.read_configuration(FLAGS.config)
-    # config = read_config.read_configuration(config_file)
     base_dir = Path(config['experiment']['data_path'])
     experiment_name = config['experiment']['name']
     runsfolder = base_dir / 'experiments'
@@ -98,7 +96,6 @@ def main(argv):
 
     mdata = get_data_module(config)
     if FLAGS.checkpoint:
-    # if checkpoint_file:
         model = seg_model_module.SegmentationModelModule.load_from_checkpoint(
             checkpoint_path=FLAGS.checkpoint,
             optimizer_class=torch.optim.AdamW
@@ -110,13 +107,15 @@ def main(argv):
     print(f'Starting learning rate: {model.lr}')
     callbacks = get_callbacks(5)
     logger = TensorBoardLogger(save_dir=runsfolder, version=1, name=experiment_name)  # type: ignore
-    trainer = pl.Trainer(accelerator="gpu", logger=logger,
+    trainer = pl.Trainer(accelerator="gpu", devices=FLAGS.num_devices, num_nodes=FLAGS.num_nodes,
+                         logger=logger,
                          max_epochs=max_epochs, check_val_every_n_epoch=1,
                          precision=16,
                          enable_model_summary=True,
                          enable_progress_bar=True,
                          log_every_n_steps=config['train']['logging_frequency_steps'],
                          callbacks=callbacks,
+                         strategy='ddp'
                          )
     trainer.logger._default_hp_metric = False
     # tuner = Tuner(trainer)
@@ -126,11 +125,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument("--config", default=None)
-    # parser.add_argument("--checkpoint", default=None)
-    # args = parser.parse_args()
-    # config_file = Path(args.config)
-
-    # main(config_file, args.checkpoint)
     app.run(main)

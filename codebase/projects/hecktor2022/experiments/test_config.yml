@@ -46,14 +46,10 @@ train:
     epochs: 80
     start_epoch: 0
     batch_size: 4
-    num_steps: 100
-    use_balanced_weights: false
     lr: 0.0002
     lr_scheduler: "poly"     #choices=['poly', 'step', 'cos']
     momentum: 0.9
     weight_decay: 0.00001
-    nesterov: false
-    callbacks:
     logging_frequency_steps: 5
 valid:
     max_queue_length: 50
