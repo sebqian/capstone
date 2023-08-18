@@ -13,7 +13,7 @@ You can directly use workspace instead of using this global path file.
 
 """
 
-from etils import epath
+from pathlib import Path
 
-DATA_PATH = epath.Path('/workspace/data')
-CODEBASE_PATH = epath.Path('/workspace/codebase')
+DATA_PATH = Path('/workspace/data')
+CODEBASE_PATH = Path('/workspace/codebase')

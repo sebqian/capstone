@@ -1,8 +1,11 @@
 """Train hecktor model in pytorch ligntning style."""
-from typing import Any, Dict, List, Optional
-from etils import epath
-
+from typing import Any, Dict, List
+from pathlib import Path
+import sys
 import argparse
+
+from absl import app
+from absl import flags
 import torch
 import torchsummary
 import pytorch_lightning as pl
@@ -14,7 +17,7 @@ from codebase import terminology as term
 from codebase.lightning_module import seg_model_module
 from codebase.models import monai_models
 from codebase.dataloader.images import data_module
-from codebase.projects.hecktor2022 import read_config
+from codebase.preprocessor import read_config
 
 _PRINT_MODEL_SUMMARY = False
 _SEGRESNET_CONFIG = {'init_filters': 32, 'use_conv_final': True,
@@ -22,6 +25,13 @@ _SEGRESNET_CONFIG = {'init_filters': 32, 'use_conv_final': True,
 # _SEGRESNET_CONFIG = {'init_filters': 32, 'use_conv_final': True,
 #                      'blocks_down': (1, 2, 2, 4), 'blocks_up': (1, 1, 1)}
 _UNET_CONFIG = {'channels': (16, 32, 64, 128, 256), 'strides': (2, 2, 2, 2), 'num_res_units': 2}
+
+FLAGS = flags.FLAGS
+flags.DEFINE_string('config', None, 'Path to the experiment configuration file.')
+flags.DEFINE_string('checkpoint', None, 'Path to the checkpoint to load.')
+
+# Required flag.
+flags.mark_flag_as_required('config')
 
 
 def get_model_module(config: Dict[str, Any]) -> pl.LightningModule:
@@ -72,9 +82,13 @@ def get_callbacks(save_top_k: int) -> List[Callback]:
 
 
 # def main(hparams: argparse.Namespace):
-def main(config_file: epath.Path, checkpoint_path: Optional[str]):
-    config = read_config.read_experiment_config(config_file)
-    base_dir = epath.Path(config['experiment']['data_path'])
+# def main(config_file, checkpoint_file):
+def main(argv):
+    del argv  # Unused
+    FLAGS(sys.argv)  # no need for this line is app.run is working
+    config = read_config.read_configuration(FLAGS.config)
+    # config = read_config.read_configuration(config_file)
+    base_dir = Path(config['experiment']['data_path'])
     experiment_name = config['experiment']['name']
     runsfolder = base_dir / 'experiments'
     max_epochs = config['train']['epochs']
@@ -83,9 +97,10 @@ def main(config_file: epath.Path, checkpoint_path: Optional[str]):
         runsfolder.mkdir(parents=True, exist_ok=True)
 
     mdata = get_data_module(config)
-    if checkpoint_path:
+    if FLAGS.checkpoint:
+    # if checkpoint_file:
         model = seg_model_module.SegmentationModelModule.load_from_checkpoint(
-            checkpoint_path=checkpoint_path,
+            checkpoint_path=FLAGS.checkpoint,
             optimizer_class=torch.optim.AdamW
         )
         model.lr = config['train']['lr']
@@ -111,10 +126,11 @@ def main(config_file: epath.Path, checkpoint_path: Optional[str]):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--config", default=None)
-    parser.add_argument("--checkpoint", default=None)
-    args = parser.parse_args()
-    config_file = epath.Path(args.config)
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument("--config", default=None)
+    # parser.add_argument("--checkpoint", default=None)
+    # args = parser.parse_args()
+    # config_file = Path(args.config)
 
-    main(config_file, args.checkpoint)
+    # main(config_file, args.checkpoint)
+    app.run(main)

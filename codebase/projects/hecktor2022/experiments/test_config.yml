@@ -1,6 +1,6 @@
 experiment:
     name: hecktor_test
-    data_path: /workspace/codebase/preprocessor/images/test_data/processed_256x256
+    data_path: /workspace/codebase/preprocessor/images/test_data/processed_128x128
     data_type: patches  # choices=['subvolume', 'patches']
 model:
     name: segresnet  # choices=['unet', 'segresnet', 'swinUnetr']

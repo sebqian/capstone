@@ -1,15 +1,15 @@
 experiment:
-    name: hecktor_exp080223_segresnet
-    data_path: /workspace/data/hecktor2022/processed_256x256
+    name: hecktor_exp081623_swinUnetr
+    data_path: /workspace/data/hecktor2022/processed_128x128
     data_type: patches  # choices=['subvolume', 'patches']
 model:
-    name: segresnet  # choices=['unet', 'segresnet', 'swinUnetr']
+    name: swinUnetr  # choices=['unet', 'segresnet', 'swinUnetr']
     output_type: logits  # choices=['logits', 'sigmoid']
     spatial_dim: 3
     spatial_size: [128, 128, 64]
     input_channel: 2
     output_channel: 3
-    dropout: 0.1
+    dropout: 0.2
     architecture:
         segresnet:
             init_filters: 32
@@ -43,12 +43,12 @@ train:
     max_queue_length: 50
     samples_per_volume: 4
     num_workers: 16
-    epochs: 200
+    epochs: 300
     start_epoch: 0
-    batch_size: 4
+    batch_size: 2
     num_steps: 100
     use_balanced_weights: false
-    lr: 0.0002
+    lr: 0.0001
     lr_scheduler: "poly"     #choices=['poly', 'step', 'cos']
     momentum: 0.9
     weight_decay: 0.00001
@@ -57,9 +57,9 @@ train:
     logging_frequency_steps: 5
 valid:
     max_queue_length: 50
-    samples_per_volume: 4
+    samples_per_volume: 1
     num_workers: 16
-    batch_size: 1
+    batch_size: 2
 test:
     include: false
     batch_size: 1

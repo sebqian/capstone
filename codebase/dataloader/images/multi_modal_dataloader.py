@@ -1,7 +1,7 @@
 """Multi-Modal image dataloader for ALREADY preprocessed images."""
 
 from typing import Any, Dict, List
-from etils import epath
+from pathlib import Path
 import torch
 from torch.utils.data import DataLoader
 import torchio as tio
@@ -41,7 +41,7 @@ class MultiModalDataLoader():
     All the images must have the same dimension and are already normalized.
     """
 
-    def __init__(self, data_folder: epath.Path,
+    def __init__(self, data_folder: Path,
                  phase: term.Phase,
                  modalities: List[term.Modality],
                  problem_type: term.ProblemType

@@ -1,4 +1,4 @@
-"""Pytorch lightning model module."""
+"""Pytorch lightning model module for patch based training data."""
 from typing import Any, Callable, Dict, Tuple
 import torch
 import torch.nn.functional as F
@@ -66,7 +66,6 @@ class SegmentationModelModule(pl.LightningModule):
         print(type(x))
         one_hot_tensor = F.one_hot(x[:, None, ...],
                                    num_classes=x.shape[1])
-        print('there')
         one_hot_tensor = torch.swapaxes(one_hot_tensor, 1, -1).squeeze(-1)
         return one_hot_tensor.float()
 
@@ -112,8 +111,9 @@ class SegmentationModelModule(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         x, y = self.prepare_batch(batch)
-        sw_batch_size = 4
-        logits = sliding_window_inference(x, self.spatial_size, sw_batch_size, self.forward)
+        logits = self.net(x)
+        # sw_batch_size = 1
+        # logits = sliding_window_inference(x, self.spatial_size, sw_batch_size, self.forward)
         loss = self.criterion(logits, y)
         # must convert MetaTensor to Tensor here otherwise wouldn't work. Don't know why.
         outputs = [self.pred_onehot(i) for i in decollate_batch(logits.as_tensor())]  # type: ignore

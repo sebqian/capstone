@@ -16,19 +16,22 @@ The data folder must follow the following structure:
     All the images must have the same dimension and are already normalized.
 """
 from typing import Any, Dict
-from etils import epath
+import numpy as np
+from pathlib import Path
 
 from torch.utils.data import DataLoader
 from monai.data import PatchDataset, Dataset
 from monai.transforms import (
+    ConcatItemsd,
+    RandAffined,
     RandFlipd,
-    RandRotated,
     Compose,
     LoadImaged,
     EnsureTyped,
     EnsureChannelFirstd,
-    RandCropByLabelClassesd,
-    RandCropByPosNegLabeld
+    RandGaussianNoised,
+    RandScaleIntensityd,
+    RandStdShiftIntensityd,
 )
 import pytorch_lightning as pl
 
@@ -57,7 +60,7 @@ class MedicalImageDataModule(pl.LightningDataModule):
         self.train_num_workers = self.configs['train']['num_workers']
         self.valid_num_workers = self.configs['valid']['num_workers']
         self.include_test = self.configs['test']['include']
-        self.base_dir = epath.Path(self.configs['experiment']['data_path'])
+        self.base_dir = Path(self.configs['experiment']['data_path'])
         self.train_ids = []
         self.valid_ids = []
         self.test_ids = []
@@ -94,23 +97,23 @@ class MedicalImageDataModule(pl.LightningDataModule):
         """Sets up data."""
         self.train_transform, self.valid_transform = self.get_augmentation_transform(self.transform_dict)
 
-        train_files = [{'input': [str(self.base_dir / 'train' / 'images' / (id + '__CT.nii.gz')),
-                                  str(self.base_dir / 'train' / 'images' / (id + '__PT.nii.gz'))],
-                       'label': str(self.base_dir / 'train' / 'labels' / (id + '.nii.gz'))
+        train_files = [{'CT': str(self.base_dir / 'train' / 'images' / (id + '__CT.nii.gz')),
+                        'PT': str(self.base_dir / 'train' / 'images' / (id + '__PT.nii.gz')),
+                        'label': str(self.base_dir / 'train' / 'labels' / (id + '.nii.gz'))
                         } for id in self.train_ids]
         self.train_set = Dataset(data=train_files, transform=self.train_transform)
 
-        valid_files = [{'input': [str(self.base_dir / 'valid' / 'images' / (id + '__CT.nii.gz')),
-                                  str(self.base_dir / 'valid' / 'images' / (id + '__PT.nii.gz'))],
-                       'label': str(self.base_dir / 'valid' / 'labels' / (id + '.nii.gz'))
+        valid_files = [{'CT': str(self.base_dir / 'valid' / 'images' / (id + '__CT.nii.gz')),
+                        'PT': str(self.base_dir / 'valid' / 'images' / (id + '__PT.nii.gz')),
+                        'label': str(self.base_dir / 'valid' / 'labels' / (id + '.nii.gz'))
                         } for id in self.valid_ids]
         self.val_set = Dataset(data=valid_files, transform=self.valid_transform)
 
         if self.include_test:
             self.test_ids = self.get_test_data_list()
-            test_files = [{'input': [str(self.base_dir / 'test' / 'images' / (id + '__CT.nii.gz')),
-                                     str(self.base_dir / 'test' / 'images' / (id + '__PT.nii.gz'))],
-                          'label': str(self.base_dir / 'test' / 'labels' / (id + '.nii.gz'))
+            test_files = [{'CT': str(self.base_dir / 'test' / 'images' / (id + '__CT.nii.gz')),
+                           'PT': str(self.base_dir / 'test' / 'images' / (id + '__PT.nii.gz')),
+                           'label': str(self.base_dir / 'test' / 'labels' / (id + '.nii.gz'))
                            } for id in self.test_ids]
             self.test_set = Dataset(data=test_files, transform=self.valid_transform)
 
@@ -118,53 +121,43 @@ class MedicalImageDataModule(pl.LightningDataModule):
         """Gets augumentation transforms."""
         train_augmentation = Compose(
             [
-                LoadImaged(keys=['input', 'label'], image_only=False),
-                EnsureChannelFirstd(keys=['input', 'label']),
-                # RandCropByLabelClassesd(
-                #     keys=['input', 'label'],
-                #     label_key='label',
-                #     ratios=[1, 4, 5],
-                #     num_classes=self.configs['metric']['num_classes'],
-                #     spatial_size=self.spatial_size,
-                #     num_samples=self.configs['train']['samples_per_volume'],
-                #     warn=False,
-                # ),
-                RandCropByPosNegLabeld(
-                    keys=['input', 'label'],
-                    spatial_size=self.spatial_size,
-                    label_key='label',
-                    pos=3.0,
-                    neg=1.0,
-                    num_samples=self.configs['train']['samples_per_volume'],
-                    image_threshold=0.2,
-                ),
-                RandFlipd(keys=['input', 'label'], prob=transform_dict['flip']['p'],
+                LoadImaged(keys=['CT', 'PT', 'label'], image_only=False),
+                EnsureChannelFirstd(keys=['CT', 'PT', 'label']),
+                RandGaussianNoised(keys=['CT']),
+                RandStdShiftIntensityd(keys=['CT'], factors=0.2),
+                RandScaleIntensityd(keys=['CT'], factors=0.1),
+                RandFlipd(keys=['CT', 'PT', 'label'], prob=transform_dict['flip']['p'],
                           spatial_axis=transform_dict['flip']['axes']),
                 # RandAffined(keys=['input', 'label'], prob=transform_dict['affine']['p'],
                 #             rotate_range=transform_dict['affine']['degrees'],),
-                RandRotated(keys=['input', 'label'], prob=transform_dict['rotate']['p'],
-                            range_x=transform_dict['rotate']['radians'][0],
-                            range_y=transform_dict['rotate']['radians'][1],
-                            range_z=transform_dict['rotate']['radians'][2],
+                RandAffined(keys=['CT', 'PT', 'label'],
+                            mode=('bilinear', 'bilinear', 'nearest'),
+                            prob=1.0,
+                            spatial_size=tuple(self.configs['model']['spatial_size']),
+                            translate_range=(10, 10, 2),
+                            rotate_range=(np.pi / 18, np.pi / 18, np.pi / 2),
+                            scale_range=(0.15, 0.15, 0.15),
                             padding_mode='border'),
-                EnsureTyped(keys=['input', 'label']),  # Note: label not in one-hot form
+                EnsureTyped(keys=['CT', 'PT', 'label']),  # Note: label not in one-hot form
                 # AsDiscreted(keys=['label'], to_onehot=self.configs['metric']['num_classes'])
+                ConcatItemsd(keys=['CT', 'PT'], name="input", dim=0)
             ]
         )
 
         valid_augmentation = Compose(
             [
-                LoadImaged(keys=['input', 'label'], image_only=False),
-                EnsureChannelFirstd(keys=['input', 'label']),
+                LoadImaged(keys=['CT', 'PT', 'label'], image_only=False),
+                EnsureChannelFirstd(keys=['CT', 'PT', 'label']),
                 # AsDiscreted(keys=['label'], to_onehot=self.configs['metric']['num_classes'])
+                ConcatItemsd(keys=['CT', 'PT'], name="input", dim=0)
             ]
         )
         return train_augmentation, valid_augmentation
 
     def train_dataloader(self):
-        p_dataset = PatchDataset(self.train_set, patch_func=lambda x: x,  # type: ignore
-                                 samples_per_image=self.configs['train']['samples_per_volume'])
-        return DataLoader(p_dataset, batch_size=self.train_batch_size,
+        # p_dataset = PatchDataset(self.train_set, patch_func=lambda x: x,  # type: ignore
+        #                          samples_per_image=self.configs['train']['samples_per_volume'])
+        return DataLoader(self.train_set, batch_size=self.train_batch_size,
                           num_workers=self.train_num_workers, shuffle=True)
 
     def val_dataloader(self):

@@ -1,0 +1,10 @@
+problem_type: segmentation   # Option: [segmentation, regression, detection]
+modality: ['CT', 'PET']
+image:
+  desired_xy_size: [512, 512]
+  desired_voxel_size: [1, 1, 2]  # mm
+  channel: 2  # number of input (image) channels
+  patch:
+    xyz_size: [128, 128, 64]
+    num_patches: 5
+    ratios: [1, 4, 5]  # [background, channel1, channel2 ...]

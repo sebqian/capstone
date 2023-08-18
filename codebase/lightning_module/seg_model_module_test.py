@@ -1,12 +1,12 @@
 """Unit Test for model_module_test.py"""
 import unittest
 import torch
-from etils import epath
+from pathlib import Path
 
 from lightning_module import seg_model_module
-from codebase.projects.hecktor2022 import read_config
+from codebase.preprocessor import read_config
 
-_CONFIG_FILE = epath.Path('/workspace/codebase/projects/hecktor2022/unittest_config.yml')
+_CONFIG_FILE = Path('/workspace/codebase/projects/hecktor2022/unittest_config.yml')
 
 
 # Define the unit test class
@@ -14,7 +14,7 @@ class SegmentationModelModuleTestCase(unittest.TestCase):
 
     # @patch("monai_models.get_model", new=MagicMock(return_value=torch.nn.Identity()))
     def setUp(self):
-        config = read_config.read_experiment_config(_CONFIG_FILE)
+        config = read_config.read_configuration(_CONFIG_FILE)
         config['metric']['num_classes'] = 2
         self.module = seg_model_module.SegmentationModelModule(
             config, optimizer_class=torch.optim.AdamW)

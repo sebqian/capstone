@@ -1,5 +1,5 @@
 experiment:
-  data_path: /workspace/codebase/preprocessor/images/test_data/processed_256x256
+  data_path: /workspace/codebase/preprocessor/images/test_data/processed_128x128
   data_type: patches
   name: hecktor_test
 loss:
@@ -7,7 +7,7 @@ loss:
   name: dice_ce
   sigmoid: false
   softmax: true
-  to_onehot_y: false
+  to_onehot_y: true
 metric:
   activate: false
   get_not_nans: false
@@ -15,9 +15,9 @@ metric:
   include_background: false
   name: dice
   num_classes: 3
-  reduction: none
+  reduction: mean
   sigmoid: false
-  softmax: true
+  softmax: false
 model:
   architecture:
     segresnet:
@@ -53,7 +53,7 @@ model:
       use_v2: true
   dropout: 0.1
   input_channel: 2
-  name: swinUnetr
+  name: segresnet
   output_channel: 3
   output_type: logits
   spatial_dim: 3
@@ -65,7 +65,7 @@ test:
   batch_size: 1
   include: false
 train:
-  batch_size: 1
+  batch_size: 4
   callbacks: null
   epochs: 80
   logging_frequency_steps: 5

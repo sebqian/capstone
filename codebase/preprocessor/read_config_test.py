@@ -2,7 +2,7 @@
 import unittest
 
 import codebase.codebase_settings as cbs
-from codebase.projects.hecktor2022 import read_config
+from codebase.preprocessor import read_config
 
 _CONFIG_FILE = cbs.CODEBASE_PATH / 'projects' / 'hecktor2022' / 'unittest_config.yml'
 
@@ -37,7 +37,7 @@ class TestReadConfig(unittest.TestCase):
         }
 
     def test_read_config(self):
-        config = read_config.read_experiment_config(_CONFIG_FILE)
+        config = read_config.read_configuration(_CONFIG_FILE)
         small_dict = {
             'model': {
                 'spatial_dim': config['model']['spatial_dim'],

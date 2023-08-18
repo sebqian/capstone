@@ -2,7 +2,7 @@
 import unittest
 import numpy as np
 import torch
-from etils import epath
+from pathlib import Path
 
 import codebase.terminology as term
 from codebase.dataloader.images import data_module
@@ -12,8 +12,8 @@ from codebase.projects.hecktor2022 import read_config
 _CONFIG_FILE = cbs.CODEBASE_PATH / 'projects' / 'hecktor2022' / 'unittest_config.yml'
 _DATA_FOLDER = '/workspace/codebase/dataloader/images/test_data'
 _DATA_ID = 'CHUP-052_108'
-_DATA_FILE = epath.Path(_DATA_FOLDER) / 'train' / 'images' / (_DATA_ID + '__input.npy')
-_LABEL_FILE = epath.Path(_DATA_FOLDER) / 'train' / 'labels' / (_DATA_ID + '__label.npy')
+_DATA_FILE = Path(_DATA_FOLDER) / 'train' / 'images' / (_DATA_ID + '__input.npy')
+_LABEL_FILE = Path(_DATA_FOLDER) / 'train' / 'labels' / (_DATA_ID + '__label.npy')
 
 
 # Define the unit test class

@@ -23,5 +23,5 @@ class Modality(Enum):
 
 class ProblemType(Enum):
     REGRESSION = 'regression'
-    SEGMENTATION = 'segmenation'
+    SEGMENTATION = 'segmentation'
     DETECTION = 'detection'

@@ -15,7 +15,7 @@ The data folder must follow the following structure:
     All the images must have the same dimension and are already normalized.
 """
 from typing import Any, Dict
-from etils import epath
+from pathlib import Path
 
 from torch.utils.data import DataLoader
 from monai.data import Dataset
@@ -53,7 +53,7 @@ class MedicalImageDataModule(pl.LightningDataModule):
         self.train_num_workers = self.configs['train']['num_workers']
         self.valid_num_workers = self.configs['valid']['num_workers']
         self.include_test = self.configs['test']['include']
-        self.base_dir = epath.Path(self.configs['experiment']['data_path'])
+        self.base_dir = Path(self.configs['experiment']['data_path'])
         self.train_ids = []
         self.valid_ids = []
         self.test_ids = []
