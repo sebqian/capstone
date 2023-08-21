@@ -6,7 +6,7 @@ from torch.optim import lr_scheduler
 import pytorch_lightning as pl
 
 from codebase.models import monai_models
-from monai.inferers import sliding_window_inference
+# from monai.inferers import sliding_window_inference
 from monai.transforms import AsDiscrete
 from monai.data.utils import decollate_batch
 from codebase.custom_losses import monai_losses
@@ -101,7 +101,8 @@ class SegmentationModelModule(pl.LightningModule):
         loss = self.criterion(logits, y)
         logs = {"train_loss": loss}
         self.train_step_outputs.append(logs)
-        self.log_dict(logs, prog_bar=True, batch_size=self.hparams['train']['batch_size'])
+        self.log_dict(logs, prog_bar=True,
+                      batch_size=self.hparams['train']['batch_size'], sync_dist=True)
         return loss
 
     def on_train_epoch_end(self):
@@ -121,7 +122,8 @@ class SegmentationModelModule(pl.LightningModule):
         self.metric(outputs, labels)
         values = {'val_num': len(outputs), 'val_loss': loss}
         self.validation_step_outputs.append(values)
-        self.log_dict({'val_loss': loss}, prog_bar=True, batch_size=self.hparams['valid']['batch_size'])
+        self.log_dict({'val_loss': loss}, prog_bar=True,
+                      batch_size=self.hparams['valid']['batch_size'], sync_dist=True)
         return values
 
     def on_validation_epoch_end(self):

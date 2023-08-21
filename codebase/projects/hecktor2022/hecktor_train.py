@@ -28,6 +28,7 @@ _UNET_CONFIG = {'channels': (16, 32, 64, 128, 256), 'strides': (2, 2, 2, 2), 'nu
 FLAGS = flags.FLAGS
 flags.DEFINE_string('config', None, 'Path to the experiment configuration file.')
 flags.DEFINE_string('checkpoint', None, 'Path to the checkpoint to load.')
+flags.DEFINE_string('strategy', 'ddp', 'Model distribution stategy.')
 flags.DEFINE_integer('num_devices', 1, 'Number of GPUs')
 flags.DEFINE_integer('num_nodes', 1, 'Number of nodes in HPC')
 flags.DEFINE_integer('num_sanity', 2, 'Number of validation steip for sanity check')
@@ -118,7 +119,7 @@ def main(argv):
                          enable_progress_bar=True,
                          log_every_n_steps=config['train']['logging_frequency_steps'],
                          callbacks=callbacks,
-                         strategy='ddp'
+                         strategy=FLAGS.strategy
                          )
     trainer.logger._default_hp_metric = False
     # tuner = Tuner(trainer)

@@ -157,13 +157,25 @@ class MedicalImageDataModule(pl.LightningDataModule):
     def train_dataloader(self):
         # p_dataset = PatchDataset(self.train_set, patch_func=lambda x: x,  # type: ignore
         #                          samples_per_image=self.configs['train']['samples_per_volume'])
-        return DataLoader(self.train_set, batch_size=self.train_batch_size,
-                          num_workers=self.train_num_workers, shuffle=True)
+        dataloader = DataLoader(self.train_set, batch_size=self.train_batch_size,
+                                num_workers=self.train_num_workers, shuffle=True)
+        print(f'Train dataloader length: {len(dataloader)}')
+        if len(dataloader) == 0:
+            raise ValueError('No train data batch available.')
+        return dataloader
 
     def val_dataloader(self):
-        return DataLoader(self.val_set, batch_size=self.valid_batch_size,
-                          num_workers=self.valid_num_workers, shuffle=False)
+        dataloader = DataLoader(self.val_set, batch_size=self.valid_batch_size,
+                                num_workers=self.valid_num_workers, shuffle=False)
+        print(f'Validation dataloader length: {len(dataloader)}')
+        if len(dataloader) == 0:
+            raise ValueError('No validation data batch available.')
+        return dataloader
 
     def test_dataloader(self):
-        return DataLoader(self.test_set, batch_size=self.test_batch_size,
-                          num_workers=self.valid_num_workers, shuffle=False)
+        dataloader = DataLoader(self.test_set, batch_size=self.test_batch_size,
+                                num_workers=self.valid_num_workers, shuffle=False)
+        print(f'Test dataloader length: {len(dataloader)}')
+        if len(dataloader) == 0:
+            raise ValueError('No test data batch available.')
+        return dataloader
