@@ -20,7 +20,7 @@ import numpy as np
 from pathlib import Path
 
 from torch.utils.data import DataLoader
-from monai.data import PatchDataset, Dataset
+from monai.data import Dataset
 from monai.transforms import (
     ConcatItemsd,
     RandAffined,

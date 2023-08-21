@@ -1,6 +1,6 @@
 experiment:
     name: hecktor_exp081623_swinUnetr
-    data_path: /workspace/data/hecktor2022/processed_128x128
+    data_path: /workspace/data/processed_128x128
     data_type: patches  # choices=['subvolume', 'patches']
 model:
     name: swinUnetr  # choices=['unet', 'segresnet', 'swinUnetr']
