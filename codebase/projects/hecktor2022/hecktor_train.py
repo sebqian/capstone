@@ -109,7 +109,9 @@ def main(argv):
     print(f'Starting learning rate: {model.lr}')
     callbacks = get_callbacks(5)
     logger = TensorBoardLogger(save_dir=runsfolder, version=1, name=experiment_name)  # type: ignore
-    trainer = pl.Trainer(accelerator="gpu", devices=FLAGS.num_devices, num_nodes=FLAGS.num_nodes,
+    trainer = pl.Trainer(accelerator="gpu",
+                         devices=FLAGS.num_devices,
+                         # num_nodes=FLAGS.num_nodes,
                          logger=logger,
                          max_epochs=max_epochs,
                          check_val_every_n_epoch=1,
