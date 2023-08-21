@@ -30,6 +30,7 @@ flags.DEFINE_string('config', None, 'Path to the experiment configuration file.'
 flags.DEFINE_string('checkpoint', None, 'Path to the checkpoint to load.')
 flags.DEFINE_integer('num_devices', 1, 'Number of GPUs')
 flags.DEFINE_integer('num_nodes', 1, 'Number of nodes in HPC')
+flags.DEFINE_integer('num_sanity', 2, 'Number of validation steip for sanity check')
 
 # Required flag.
 flags.mark_flag_as_required('config')
@@ -109,8 +110,10 @@ def main(argv):
     logger = TensorBoardLogger(save_dir=runsfolder, version=1, name=experiment_name)  # type: ignore
     trainer = pl.Trainer(accelerator="gpu", devices=FLAGS.num_devices, num_nodes=FLAGS.num_nodes,
                          logger=logger,
-                         max_epochs=max_epochs, check_val_every_n_epoch=1,
-                         precision=16,
+                         max_epochs=max_epochs,
+                         check_val_every_n_epoch=1,
+                         # precision=16,
+                         num_sanity_val_steps=0,
                          enable_model_summary=True,
                          enable_progress_bar=True,
                          log_every_n_steps=config['train']['logging_frequency_steps'],
