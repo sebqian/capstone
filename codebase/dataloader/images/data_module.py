@@ -102,12 +102,14 @@ class MedicalImageDataModule(pl.LightningDataModule):
                         'label': str(self.base_dir / 'train' / 'labels' / (id + '.nii.gz'))
                         } for id in self.train_ids]
         self.train_set = Dataset(data=train_files, transform=self.train_transform)
+        print(f'Size of train dataset: {len(self.train_set)}')
 
         valid_files = [{'CT': str(self.base_dir / 'valid' / 'images' / (id + '__CT.nii.gz')),
                         'PT': str(self.base_dir / 'valid' / 'images' / (id + '__PT.nii.gz')),
                         'label': str(self.base_dir / 'valid' / 'labels' / (id + '.nii.gz'))
                         } for id in self.valid_ids]
         self.val_set = Dataset(data=valid_files, transform=self.valid_transform)
+        print(f'Size of validation dataset: {len(self.val_set)}')
 
         if self.include_test:
             self.test_ids = self.get_test_data_list()
@@ -116,6 +118,7 @@ class MedicalImageDataModule(pl.LightningDataModule):
                            'label': str(self.base_dir / 'test' / 'labels' / (id + '.nii.gz'))
                            } for id in self.test_ids]
             self.test_set = Dataset(data=test_files, transform=self.valid_transform)
+            print(f'Size of test dataset: {len(self.test_set)}')
 
     def get_augmentation_transform(self, transform_dict: Dict[str, Any]):
         """Gets augumentation transforms."""
